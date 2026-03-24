@@ -33,7 +33,7 @@ builds the WASM and publishes `www/` to GitHub Pages on every push to `main`.
 Your page will be live at:
 
 ```
-https://<your-username>.github.io/<repo-name>/
+https://imperialbower.github.io/pkgto-web/
 ```
 
 The workflow installs Rust, adds the `wasm32-unknown-unknown` target, installs `wasm-pack`,
