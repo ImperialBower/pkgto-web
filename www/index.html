@@ -154,12 +154,35 @@
       margin-bottom: 0.6rem;
     }
 
+    .combos-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .combos-tab {
+      background: none;
+      border: 1px solid #2a4a2a;
+      border-radius: 6px 6px 0 0;
+      color: #7a9a7a;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.35rem 0.9rem;
+      cursor: pointer;
+      width: auto;
+      letter-spacing: 0.05em;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .combos-tab:hover { background: #162816; color: #e8e0d0; }
+    .combos-tab.active { background: #162816; border-bottom-color: #162816; color: #f0c040; }
+
     .combos-wrap {
       max-height: 400px;
       overflow-y: auto;
       margin-bottom: 1.5rem;
       border: 1px solid #2a4a2a;
-      border-radius: 6px;
+      border-radius: 0 6px 6px 6px;
     }
 
     .combos-wrap table { font-size: 0.82rem; }
@@ -287,13 +310,18 @@
       </div>
     </div>
 
-    <p class="section-title">Villain Combos (after blockers — <span id="matchup-count"></span>)</p>
+    <p class="section-title">Villain Combos</p>
+    <div class="combos-tabs">
+      <button type="button" class="combos-tab active" data-tab="blocked">After Blockers (<span id="matchup-count"></span>)</button>
+      <button type="button" class="combos-tab" data-tab="all">Full Range</button>
+    </div>
     <div class="combos-wrap">
       <table>
         <thead>
           <tr><th>Hand</th><th>Combos</th><th>Pairs</th></tr>
         </thead>
         <tbody id="combos-blocked"></tbody>
+        <tbody id="combos-all" style="display:none"></tbody>
       </table>
     </div>
   </div>
@@ -383,29 +411,49 @@
     document.getElementById('draw-count').textContent = num(c.draws) + ' runouts';
 
     document.getElementById('matchup-count').textContent = d.matchup_count + ' combos';
-    const combosBody = document.getElementById('combos-blocked');
-    combosBody.innerHTML = '';
+
     const RANK = {A:14,K:13,Q:12,J:11,T:10,'9':9,'8':8,'7':7,'6':6,'5':5,'4':4,'3':3,'2':2};
-    const rows = [];
-    for (const line of d.villain_combos_blocked.split('\n')) {
-      const m = line.trim().match(/^(\S+)\s+(\d+) of\s+(\d+):\s+(.+)$/);
-      if (!m) continue;
-      const [, hand, avail, total, pairs] = m;
-      const isPair = hand[0] === hand[1];
-      rows.push({ hand, avail, total, pairs, isPair });
+
+    function parseAndSortCombos(str) {
+      const rows = [];
+      for (const line of str.split('\n')) {
+        const m = line.trim().match(/^(\S+)\s+(\d+) of\s+(\d+):\s+(.+)$/);
+        if (!m) continue;
+        const [, hand, avail, total, pairs] = m;
+        const isPair = hand[0] === hand[1];
+        rows.push({ hand, avail, total, pairs, isPair });
+      }
+      rows.sort((a, b) => {
+        if (a.isPair !== b.isPair) return a.isPair ? -1 : 1;
+        const ra = RANK[a.hand[0]] ?? 0, rb = RANK[b.hand[0]] ?? 0;
+        if (ra !== rb) return rb - ra;
+        const ra2 = RANK[a.hand[1]] ?? 0, rb2 = RANK[b.hand[1]] ?? 0;
+        return rb2 - ra2;
+      });
+      return rows;
     }
-    rows.sort((a, b) => {
-      if (a.isPair !== b.isPair) return a.isPair ? -1 : 1;
-      const ra = RANK[a.hand[0]] ?? 0, rb = RANK[b.hand[0]] ?? 0;
-      if (ra !== rb) return rb - ra;
-      const ra2 = RANK[a.hand[1]] ?? 0, rb2 = RANK[b.hand[1]] ?? 0;
-      return rb2 - ra2;
+
+    function fillCombosTable(tbody, rows) {
+      tbody.innerHTML = '';
+      for (const { hand, avail, total, pairs } of rows) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${hand}</td><td>${avail} of ${total}</td><td class="combo-pairs">${pairs}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+
+    fillCombosTable(document.getElementById('combos-blocked'), parseAndSortCombos(d.villain_combos_blocked));
+    fillCombosTable(document.getElementById('combos-all'),     parseAndSortCombos(d.villain_combos_all));
+
+    document.querySelectorAll('.combos-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.combos-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.dataset.tab;
+        document.getElementById('combos-blocked').style.display = tab === 'blocked' ? '' : 'none';
+        document.getElementById('combos-all').style.display     = tab === 'all'     ? '' : 'none';
+      });
     });
-    for (const { hand, avail, total, pairs } of rows) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${hand}</td><td>${avail} of ${total}</td><td class="combo-pairs">${pairs}</td>`;
-      combosBody.appendChild(tr);
-    }
 
     const tbody = document.getElementById('matchup-tbody');
     tbody.innerHTML = '';
