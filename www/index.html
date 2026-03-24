@@ -266,6 +266,28 @@
     .pct-lose { color: #e05050; }
     .pct-draw { color: #a0a0a0; }
 
+    .share-bar {
+      max-width: 860px;
+      margin: 0 auto 0.75rem;
+      text-align: right;
+    }
+
+    .share-btn {
+      background: none;
+      border: 1px solid #2a4a2a;
+      border-radius: 6px;
+      color: #7a9a7a;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 0.3rem 0.75rem;
+      cursor: pointer;
+      width: auto;
+      letter-spacing: 0.05em;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .share-btn:hover { background: #162816; color: #e8e0d0; }
+
     #loading {
       text-align: center;
       color: #7a9a7a;
@@ -317,6 +339,9 @@
 <div id="loading"><span class="spinner"></span> Analyzing…</div>
 
 <div id="results">
+  <div class="share-bar">
+    <button type="button" class="share-btn" id="share-btn">🔗 Copy link</button>
+  </div>
   <div class="card">
     <p class="section-title">Combined Preflop Equity vs Range</p>
     <div class="summary-grid">
@@ -386,16 +411,39 @@
   const loading = document.getElementById('loading');
   const results = document.getElementById('results');
 
+  // Populate inputs from URL query params.
+  // Use URLSearchParams for hero so '+' decodes as space (e.g. KS+KH → "KS KH").
+  // Parse villain raw so '+' is preserved as range notation (e.g. 66+,AJs+).
+  const urlParams = new URLSearchParams(location.search);
+  const rawVillainMatch = location.search.match(/[?&]villain=([^&]*)/);
+  if (urlParams.has('hero'))    document.getElementById('hero').value    = urlParams.get('hero');
+  if (rawVillainMatch)          document.getElementById('villain').value = decodeURIComponent(rawVillainMatch[1]);
+  const autoSubmit = urlParams.has('hero') || rawVillainMatch;
+
   async function boot() {
     await init();
     btn.textContent = 'Analyze';
     btn.disabled = false;
+    if (autoSubmit) form.requestSubmit();
   }
 
   boot().catch(e => {
     btn.textContent = 'WASM failed to load';
     errBox.style.display = 'block';
     errBox.textContent = String(e);
+  });
+
+  document.getElementById('share-btn').addEventListener('click', () => {
+    const hero    = document.getElementById('hero').value.trim();
+    const villain = document.getElementById('villain').value.trim();
+    const params  = new URLSearchParams({ hero, villain });
+    const url     = `${location.origin}${location.pathname}?${params}`;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('share-btn');
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 2000);
+    });
   });
 
   form.addEventListener('submit', e => {
