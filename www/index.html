@@ -154,17 +154,24 @@
       margin-bottom: 0.6rem;
     }
 
-    .combos-box {
-      background: #162816;
-      border-radius: 6px;
-      padding: 0.6rem 0.8rem;
-      font-size: 0.82rem;
-      color: #a0c0a0;
-      margin-bottom: 1.5rem;
-      word-break: break-word;
-      max-height: 80px;
+    .combos-wrap {
+      max-height: 400px;
       overflow-y: auto;
+      margin-bottom: 1.5rem;
+      border: 1px solid #2a4a2a;
+      border-radius: 6px;
     }
+
+    .combos-wrap table { font-size: 0.82rem; }
+
+    .combos-wrap thead th {
+      position: sticky;
+      top: 0;
+      background: #0f1f0f;
+      z-index: 1;
+    }
+
+    .combo-pairs { color: #6a8a6a; }
 
     table {
       width: 100%;
@@ -281,7 +288,14 @@
     </div>
 
     <p class="section-title">Villain Combos (after blockers — <span id="matchup-count"></span>)</p>
-    <div class="combos-box" id="combos-blocked"></div>
+    <div class="combos-wrap">
+      <table>
+        <thead>
+          <tr><th>Hand</th><th>Combos</th><th>Pairs</th></tr>
+        </thead>
+        <tbody id="combos-blocked"></tbody>
+      </table>
+    </div>
   </div>
 
   <div class="card">
@@ -369,7 +383,29 @@
     document.getElementById('draw-count').textContent = num(c.draws) + ' runouts';
 
     document.getElementById('matchup-count').textContent = d.matchup_count + ' combos';
-    document.getElementById('combos-blocked').textContent = d.villain_combos_blocked;
+    const combosBody = document.getElementById('combos-blocked');
+    combosBody.innerHTML = '';
+    const RANK = {A:14,K:13,Q:12,J:11,T:10,'9':9,'8':8,'7':7,'6':6,'5':5,'4':4,'3':3,'2':2};
+    const rows = [];
+    for (const line of d.villain_combos_blocked.split('\n')) {
+      const m = line.trim().match(/^(\S+)\s+(\d+) of\s+(\d+):\s+(.+)$/);
+      if (!m) continue;
+      const [, hand, avail, total, pairs] = m;
+      const isPair = hand[0] === hand[1];
+      rows.push({ hand, avail, total, pairs, isPair });
+    }
+    rows.sort((a, b) => {
+      if (a.isPair !== b.isPair) return a.isPair ? -1 : 1;
+      const ra = RANK[a.hand[0]] ?? 0, rb = RANK[b.hand[0]] ?? 0;
+      if (ra !== rb) return rb - ra;
+      const ra2 = RANK[a.hand[1]] ?? 0, rb2 = RANK[b.hand[1]] ?? 0;
+      return rb2 - ra2;
+    });
+    for (const { hand, avail, total, pairs } of rows) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${hand}</td><td>${avail} of ${total}</td><td class="combo-pairs">${pairs}</td>`;
+      combosBody.appendChild(tr);
+    }
 
     const tbody = document.getElementById('matchup-tbody');
     tbody.innerHTML = '';
