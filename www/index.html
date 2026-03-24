@@ -196,6 +196,33 @@
 
     .combo-pairs { color: #6a8a6a; }
 
+    .range-chart { overflow-x: auto; }
+
+    .range-grid {
+      display: inline-grid;
+      grid-template-columns: repeat(13, minmax(0, 1fr));
+      gap: 2px;
+      width: 100%;
+    }
+
+    .range-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(0.45rem, 1vw, 0.62rem);
+      font-weight: 600;
+      border-radius: 3px;
+      background: #0d180d;
+      color: #1e2e1e;
+      letter-spacing: 0;
+      user-select: none;
+    }
+
+    .range-cell.in-range.is-pair    { background: #3a2800; color: #f0c040; }
+    .range-cell.in-range.is-suited  { background: #0d3a1a; color: #50c878; }
+    .range-cell.in-range.is-offsuit { background: #0e2a3a; color: #60a8d0; }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -327,6 +354,13 @@
   </div>
 
   <div class="card">
+    <p class="section-title">Villain Range Chart</p>
+    <div class="range-chart">
+      <div class="range-grid" id="range-grid"></div>
+    </div>
+  </div>
+
+  <div class="card">
     <p class="section-title">Per-Hand Matchups</p>
     <table>
       <thead>
@@ -400,6 +434,60 @@
   function pct(n) { return n.toFixed(2) + '%'; }
   function num(n)  { return n.toLocaleString(); }
 
+  const RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+  const RANK_IDX = Object.fromEntries(RANKS.map((r, i) => [r.toUpperCase(), i]));
+
+  function parseRange(rangeStr) {
+    const selected = new Set();
+    for (let token of rangeStr.split(',').map(t => t.trim()).filter(Boolean)) {
+      const plus = token.endsWith('+');
+      if (plus) token = token.slice(0, -1);
+      let qual = null;
+      if (token.endsWith('s')) { qual = 's'; token = token.slice(0, -1); }
+      else if (token.endsWith('o')) { qual = 'o'; token = token.slice(0, -1); }
+      const r1 = token[0]?.toUpperCase(), r2 = token[1]?.toUpperCase();
+      const i1 = RANK_IDX[r1], i2 = RANK_IDX[r2];
+      if (i1 === undefined || i2 === undefined) continue;
+      if (i1 === i2) {
+        // pocket pair
+        if (plus) { for (let i = 0; i <= i1; i++) selected.add(`${i},${i}`); }
+        else selected.add(`${i1},${i1}`);
+      } else {
+        const hi = Math.min(i1, i2), lo = Math.max(i1, i2);
+        const add = (i, j) => selected.add(`${i},${j}`);
+        if (plus) {
+          for (let j = hi + 1; j <= lo; j++) {
+            if (qual !== 'o') add(hi, j); // suited
+            if (qual !== 's') add(j, hi); // offsuit
+          }
+        } else {
+          if (qual !== 'o') add(hi, lo);
+          if (qual !== 's') add(lo, hi);
+        }
+      }
+    }
+    return selected;
+  }
+
+  function renderRangeChart(rangeStr) {
+    const selected = parseRange(rangeStr);
+    const grid = document.getElementById('range-grid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 13; i++) {
+      for (let j = 0; j < 13; j++) {
+        const cell = document.createElement('div');
+        cell.className = 'range-cell';
+        let label, type;
+        if (i === j)      { label = RANKS[i] + RANKS[i]; type = 'pair'; }
+        else if (i < j)   { label = RANKS[i] + RANKS[j] + 's'; type = 'suited'; }
+        else               { label = RANKS[j] + RANKS[i] + 'o'; type = 'offsuit'; }
+        cell.textContent = label;
+        if (selected.has(`${i},${j}`)) cell.classList.add('in-range', `is-${type}`);
+        grid.appendChild(cell);
+      }
+    }
+  }
+
   function render(d) {
     const c = d.combined;
 
@@ -409,6 +497,8 @@
     document.getElementById('win-count').textContent  = num(c.wins) + ' runouts';
     document.getElementById('lose-count').textContent = num(c.losses) + ' runouts';
     document.getElementById('draw-count').textContent = num(c.draws) + ' runouts';
+
+    renderRangeChart(d.villain_range);
 
     document.getElementById('matchup-count').textContent = d.matchup_count + ' combos';
 

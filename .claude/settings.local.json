@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(curl -L \"https://raw.githubusercontent.com/ImperialBower/.github/main/profile/images/imperial_bower.jpg\" -o /tmp/imperial_bower.jpg)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "WebFetch(domain:redchippoker.com)"
     ]
   }
 }
