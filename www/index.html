@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GTO Preflop Analyzer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #1a2e1a;
+      color: #e8e0d0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      letter-spacing: 0.05em;
+      color: #f0c040;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #7a9a7a;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: #0f1f0f;
+      border: 1px solid #2a4a2a;
+      border-radius: 10px;
+      padding: 1.5rem;
+      max-width: 860px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #7a9a7a;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.4rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      background: #162816;
+      border: 1px solid #2a4a2a;
+      border-radius: 6px;
+      color: #e8e0d0;
+      font-size: 1rem;
+      padding: 0.6rem 0.8rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus { border-color: #f0c040; }
+
+    .examples {
+      font-size: 0.75rem;
+      color: #4a6a4a;
+      margin-top: 0.3rem;
+    }
+
+    button {
+      width: 100%;
+      background: #f0c040;
+      color: #0f1f0f;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.7rem;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.05em;
+    }
+
+    button:hover { background: #f8d060; }
+    button:active { transform: scale(0.98); }
+    button:disabled { background: #4a5a3a; color: #7a8a6a; cursor: default; }
+
+    .error-box {
+      background: #2a0a0a;
+      border: 1px solid #7a2a2a;
+      border-radius: 8px;
+      color: #f08080;
+      padding: 1rem 1.2rem;
+      max-width: 860px;
+      margin: 0 auto 1.5rem;
+      display: none;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-block {
+      text-align: center;
+      padding: 0.8rem;
+      border-radius: 8px;
+      background: #162816;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7a9a7a;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .win-color  { color: #50c878; }
+    .lose-color { color: #e05050; }
+    .draw-color { color: #c0c0c0; }
+
+    .stat-count {
+      font-size: 0.78rem;
+      color: #4a6a4a;
+      margin-top: 0.2rem;
+    }
+
+    .section-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #7a9a7a;
+      margin-bottom: 0.6rem;
+    }
+
+    .combos-box {
+      background: #162816;
+      border-radius: 6px;
+      padding: 0.6rem 0.8rem;
+      font-size: 0.82rem;
+      color: #a0c0a0;
+      margin-bottom: 1.5rem;
+      word-break: break-word;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7a9a7a;
+      padding: 0.4rem 0.6rem;
+      text-align: left;
+      border-bottom: 1px solid #2a4a2a;
+    }
+
+    tbody tr { border-bottom: 1px solid #1a2e1a; }
+    tbody tr:hover { background: #162816; }
+
+    tbody td {
+      padding: 0.45rem 0.6rem;
+      color: #c8c0b0;
+      white-space: nowrap;
+    }
+
+    .bar-cell { width: 160px; }
+
+    .bar-wrap {
+      display: flex;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+      background: #1a2e1a;
+    }
+
+    .bar-win  { background: #50c878; }
+    .bar-lose { background: #e05050; }
+    .bar-draw { background: #808080; }
+
+    .pct-win  { color: #50c878; }
+    .pct-lose { color: #e05050; }
+    .pct-draw { color: #a0a0a0; }
+
+    #loading {
+      text-align: center;
+      color: #7a9a7a;
+      font-size: 0.9rem;
+      padding: 1rem;
+      display: none;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid #2a4a2a;
+      border-top-color: #f0c040;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #results { display: none; }
+  </style>
+</head>
+<body>
+
+<h1>♠ GTO Preflop Analyzer ♥</h1>
+<p class="subtitle">Powered by pkcore + WebAssembly</p>
+
+<div class="card">
+  <form id="analyze-form">
+    <div class="form-grid">
+      <div>
+        <label for="hero">Your Hand</label>
+        <input id="hero" type="text" value="K♠ K♥" autocomplete="off" spellcheck="false">
+        <p class="examples">e.g. K♠ K♥ &nbsp;·&nbsp; AhKh &nbsp;·&nbsp; As Kd</p>
+      </div>
+      <div>
+        <label for="villain">Villain Range</label>
+        <input id="villain" type="text" value="66+,AJs+,KQs,AJo+,KQo" autocomplete="off" spellcheck="false">
+        <p class="examples">e.g. 66+,AJs+,KQs,AJo+,KQo</p>
+      </div>
+    </div>
+    <button type="submit" id="analyze-btn" disabled>Loading WASM…</button>
+  </form>
+</div>
+
+<div class="error-box" id="error-box"></div>
+<div id="loading"><span class="spinner"></span> Analyzing…</div>
+
+<div id="results">
+  <div class="card">
+    <p class="section-title">Combined Preflop Equity vs Range</p>
+    <div class="summary-grid">
+      <div class="stat-block">
+        <div class="stat-label">Hero Wins</div>
+        <div class="stat-value win-color" id="win-pct">—</div>
+        <div class="stat-count" id="win-count"></div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Villain Wins</div>
+        <div class="stat-value lose-color" id="lose-pct">—</div>
+        <div class="stat-count" id="lose-count"></div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-label">Chop</div>
+        <div class="stat-value draw-color" id="draw-pct">—</div>
+        <div class="stat-count" id="draw-count"></div>
+      </div>
+    </div>
+
+    <p class="section-title">Villain Combos (after blockers — <span id="matchup-count"></span>)</p>
+    <div class="combos-box" id="combos-blocked"></div>
+  </div>
+
+  <div class="card">
+    <p class="section-title">Per-Hand Matchups</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Villain Hand</th>
+          <th>Win %</th>
+          <th>Lose %</th>
+          <th>Chop %</th>
+          <th class="bar-cell">Equity</th>
+        </tr>
+      </thead>
+      <tbody id="matchup-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import init, { analyze_gto } from './pkg/pkgto_web.js';
+
+  const btn    = document.getElementById('analyze-btn');
+  const form   = document.getElementById('analyze-form');
+  const errBox = document.getElementById('error-box');
+  const loading = document.getElementById('loading');
+  const results = document.getElementById('results');
+
+  async function boot() {
+    await init();
+    btn.textContent = 'Analyze';
+    btn.disabled = false;
+  }
+
+  boot().catch(e => {
+    btn.textContent = 'WASM failed to load';
+    errBox.style.display = 'block';
+    errBox.textContent = String(e);
+  });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const hero    = document.getElementById('hero').value.trim();
+    const villain = document.getElementById('villain').value.trim();
+
+    errBox.style.display = 'none';
+    results.style.display = 'none';
+    loading.style.display = 'block';
+    btn.disabled = true;
+
+    // Yield to the event loop so the spinner renders before the heavy WASM call.
+    setTimeout(() => {
+      try {
+        const raw = analyze_gto(hero, villain);
+        const data = JSON.parse(raw);
+
+        if (data.error) {
+          errBox.textContent = data.error;
+          errBox.style.display = 'block';
+        } else {
+          render(data);
+          results.style.display = 'block';
+        }
+      } catch (err) {
+        errBox.textContent = String(err);
+        errBox.style.display = 'block';
+      } finally {
+        loading.style.display = 'none';
+        btn.disabled = false;
+      }
+    }, 20);
+  });
+
+  function pct(n) { return n.toFixed(2) + '%'; }
+  function num(n)  { return n.toLocaleString(); }
+
+  function render(d) {
+    const c = d.combined;
+
+    document.getElementById('win-pct').textContent   = pct(c.win_pct);
+    document.getElementById('lose-pct').textContent  = pct(c.loss_pct);
+    document.getElementById('draw-pct').textContent  = pct(c.draw_pct);
+    document.getElementById('win-count').textContent  = num(c.wins) + ' runouts';
+    document.getElementById('lose-count').textContent = num(c.losses) + ' runouts';
+    document.getElementById('draw-count').textContent = num(c.draws) + ' runouts';
+
+    document.getElementById('matchup-count').textContent = d.matchup_count + ' combos';
+    document.getElementById('combos-blocked').textContent = d.villain_combos_blocked;
+
+    const tbody = document.getElementById('matchup-tbody');
+    tbody.innerHTML = '';
+    for (const m of d.matchups) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${m.villain_hand}</td>
+        <td class="pct-win">${pct(m.win_pct)}</td>
+        <td class="pct-lose">${pct(m.loss_pct)}</td>
+        <td class="pct-draw">${pct(m.draw_pct)}</td>
+        <td class="bar-cell">
+          <div class="bar-wrap">
+            <div class="bar-win"  style="width:${m.win_pct}%"></div>
+            <div class="bar-draw" style="width:${m.draw_pct}%"></div>
+            <div class="bar-lose" style="width:${m.loss_pct}%"></div>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    }
+  }
+</script>
+</body>
+</html>
