@@ -18,6 +18,31 @@ pkcore embeds 812,175 precomputed heads-up preflop matchup results (from `hups.b
 into the WASM binary via `include_bytes!`, so all lookups happen in-memory with no network
 requests or database connections.
 
+## GitHub Pages Deployment
+
+The repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that
+builds the WASM and publishes `www/` to GitHub Pages on every push to `main`.
+
+### One-time setup
+
+1. Push this repository to GitHub.
+2. Go to **Settings → Pages**.
+3. Under **Source**, select **GitHub Actions**.
+4. Trigger a deploy by pushing a commit or clicking **Run workflow** on the Actions tab.
+
+Your page will be live at:
+
+```
+https://<your-username>.github.io/<repo-name>/
+```
+
+The workflow installs Rust, adds the `wasm32-unknown-unknown` target, installs `wasm-pack`,
+runs a release build, and deploys — no pre-built binaries need to be committed.
+
+> **Note:** `www/pkg/` is gitignored. The CI generates it fresh on every deploy.
+
+---
+
 ## Prerequisites
 
 - [Rust](https://rustup.rs/) with the `wasm32-unknown-unknown` target:
@@ -114,6 +139,9 @@ On error:
 
 ```
 pkgto-web/
+├── .github/
+│   └── workflows/
+│       └── deploy.yml  — builds WASM and deploys to GitHub Pages on push
 ├── Cargo.toml          — cdylib crate, depends on pkcore
 ├── Makefile
 ├── src/
