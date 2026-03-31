@@ -1,14 +1,17 @@
 [package]
 name = "pkgto-web"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2024"
 rust-version = "1.91.0"
+license = "GPL-3"
+repository = "https://github.com/ImperialBower/pkgto-web"
+description = "WebAssembly demo client for pkcore library."
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-pkcore = "0.0.29"
+pkcore = "0.0.31"
 wasm-bindgen = "0.2"
 console_error_panic_hook = "0.1"
 serde = { version = "1.0", features = ["derive"] }
