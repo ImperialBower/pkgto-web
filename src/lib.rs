@@ -69,7 +69,15 @@ pub fn analyze_gto(hero: &str, villain_range: &str) -> String {
     };
 
     let solver = Versus::new(hero_two, combos);
-    let hups = solver.hups_at_deal();
+    let hups = match solver.hups_at_deal() {
+        Ok(h) => h,
+        Err(e) => {
+            return serde_json::to_string(&GtoError {
+                error: format!("Failed to compute matchups: {e}"),
+            })
+            .unwrap_or_default();
+        }
+    };
 
     if hups.is_empty() {
         return serde_json::to_string(&GtoError {
